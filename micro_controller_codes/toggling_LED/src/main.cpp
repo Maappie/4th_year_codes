@@ -1,20 +1,22 @@
+// connect one LED for each pin 5, 18, 19, 21 and add resistors connecting to GND
+// add push button connected to pin 34 and the other side is to connected to GND
 #include <Arduino.h>
 
 const int led_pins[4] = {5, 18, 19, 21};
 const int button_pin = 34;
 
-bool led_state = HIGH;         // Current state of LEDs
-bool last_button_state = HIGH;   // Previous button state
+bool led_state = HIGH;         
+bool last_button_state = HIGH;   
 
 void setup() {
   Serial.begin(115200);
 
   for (int i = 0; i < 4; i++) {
     pinMode(led_pins[i], OUTPUT);
-    digitalWrite(led_pins[i], LOW);  // Start OFF
+    digitalWrite(led_pins[i], LOW); 
   }
 
-  pinMode(button_pin, INPUT_PULLUP);  // Button with internal pull-up
+  pinMode(button_pin, INPUT_PULLUP);  
 }
 
 void loop() {
