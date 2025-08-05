@@ -1,0 +1,63 @@
+Alright — here’s the **wiring diagram for ESP32** based on your setup (IR receiver, gas sensor, flame sensor, and relay). I’ll keep it practical and clear — not overengineered.
+
+---
+
+## ✅ ESP32 Wiring Guide
+
+| Component        | ESP32 Pin        | Notes                                                                              |
+| ---------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| **Flame Sensor** | `GPIO 15`        | Connect to **DOUT** pin of flame sensor module (digital output)                    |
+| **Gas Sensor**   | `GPIO 34` (ADC1) | Connect to **AOUT** of MQ-x gas sensor module (analog output only!)                |
+| **Relay Module** | `GPIO 4`         | IN pin of relay connects here                                                      |
+| **IR Receiver**  | `GPIO 14`        | OUT pin of the IR sensor goes here                                                 |
+| **5V Power**     | `5V` on ESP32    | Power for sensors (relay, IR, gas, flame); may need external 5V if current > 500mA |
+| **GND**          | `GND` on ESP32   | Common ground to **all modules**                                                   |
+
+---
+
+### 🔌 Detailed per-component:
+
+#### 🔥 **Flame Sensor**
+
+* **D0 (Digital Out)** → `GPIO 15`
+* **VCC** → `5V`
+* **GND** → `GND`
+
+> Most flame sensors output LOW when flame is detected (hence: `flameDetected == LOW` in code)
+
+---
+
+#### 🧪 **Gas Sensor (e.g., MQ-2, MQ-5)**
+
+* **A0 (Analog Out)** → `GPIO 34` (must be ADC1 — not ADC2!)
+* **VCC** → `5V`
+* **GND** → `GND`
+
+> Gas threshold (e.g., `> 400`) depends on sensor and environment. You may need calibration.
+
+---
+
+#### 📡 **IR Receiver (e.g., VS1838B, HX1838)**
+
+* **OUT** → `GPIO 14`
+* **VCC** → `3.3V` or `5V` (depends on module — most tolerate both)
+* **GND** → `GND`
+
+> Be sure to check your IR module: some work best at 5V, some are 3.3V-safe.
+
+---
+
+#### ⚙️ **Relay Module (1-channel or 2-channel)**
+
+* **IN** → `GPIO 4`
+* **VCC** → `5V`
+* **GND** → `GND`
+
+> Relay logic:
+>
+> * **LOW = ON** (active low)
+> * **HIGH = OFF**
+>
+> This explains why the sketch uses `digitalWrite(relayPin, HIGH)` to activate safety.
+
+---
