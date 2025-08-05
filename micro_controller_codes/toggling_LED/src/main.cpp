@@ -1,9 +1,9 @@
 // connect one LED for each pin 5, 18, 19, 21 and add resistors connecting to GND
-// add push button connected to pin 34 and the other side is to connected to GND
+// add push button connected to pin 25 and the other side is connected to GND
 #include <Arduino.h>
 
 const int led_pins[4] = {5, 18, 19, 21};
-const int button_pin = 34;
+const int button_pin = 25;
 
 bool led_state = HIGH;         
 bool last_button_state = HIGH;   
