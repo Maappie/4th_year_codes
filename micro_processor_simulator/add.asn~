@@ -1,0 +1,16 @@
+; Program: Add two numbers in memory
+
+jmp start       ; jump to start of code
+
+; --- Data section ---
+num1: db 05h    ; first number
+num2: db 03h    ; second number
+result: db 00h  ; store result here
+
+; --- Code section ---
+start:  lda num1    ; Load A with first number
+        mov b, a    ; Copy A into B
+        lda num2    ; Load A with second number
+        add b       ; Add B to A
+        sta result  ; Store result in "result" memory
+        hlt         ; Stop

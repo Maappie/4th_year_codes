@@ -1,0 +1,16 @@
+; Lab 5: Multiply Two 8-bit Numbers (unsigned)
+; [8000H] * [8001H] -> [8002H]   (low 8 bits only)
+
+        LDA 8000H        ; A = multiplicand
+        MOV B, A         ; B = multiplicand
+        LDA 8001H        ; A = multiplier
+        MOV C, A         ; C = multiplier (loop counter)
+
+        MVI A, 00H       ; A = 0 (accumulator for sum)
+
+LOOP:   ADD B            ; A += multiplicand
+        DCR C            ; C--
+        JNZ LOOP         ; repeat until C == 0
+
+        STA 8002H        ; store product (low 8 bits)
+        HLT

@@ -1,0 +1,4 @@
+JNS POSITIVE_RESULT ; Jump if Sign Flag is not set
+; Code for negative result
+POSITIVE_RESULT:
+; Code for positive result

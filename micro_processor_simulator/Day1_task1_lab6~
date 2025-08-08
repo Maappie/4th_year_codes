@@ -1,0 +1,27 @@
+; Lab 6: Divide Two 8-bit Numbers (unsigned)
+; dividend = [8000H]
+; divisor  = [8001H]
+; quotient  -> [8002H]
+; remainder -> [8003H]
+
+        LDA 8000H        ; A = dividend
+        MOV B, A         ; B = dividend (we'll use A as working remainder)
+
+        LDA 8001H        ; A = divisor
+        MOV C, A         ; C = divisor
+
+        MVI D, 00H       ; D = quotient = 0
+        MOV A, B         ; A = current remainder (start as dividend)
+
+DIV_LOOP: CMP C          ; compare remainder (A) with divisor (C)
+          JC DONE        ; if A < C, we're done
+          SUB C          ; A = A - C  (subtract divisor)
+          INR D          ; quotient++
+          JMP DIV_LOOP
+
+DONE:     MOV B, A       ; B = remainder
+          MOV A, D       ; A = quotient
+          STA 8002H      ; store quotient
+          MOV A, B
+          STA 8003H      ; store remainder
+          HLT

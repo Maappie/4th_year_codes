@@ -1,0 +1,9 @@
+; Lab 4: Compute 2's Complement of an 8-bit Number
+; Input : [8000H]
+; Output: [8001H] = 2's complement of [8000H]
+
+        LDA 8000H     ; Load number from 8000H into A
+        CMA           ; Take 1's complement of A
+        ADI 01H       ; Add 1 to get 2's complement
+        STA 8001H     ; Store result at 8001H
+        HLT           ; Stop execution

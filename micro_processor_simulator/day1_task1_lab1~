@@ -1,0 +1,11 @@
+; Lab 1: Add Two 8-bit Numbers
+; Objective:
+; Add the numbers stored at memory locations 8000H and 8001H
+; and store the result at memory location 8002H.
+
+        LDA 8000H      ; Load first number from 8000H into A
+        MOV B, A       ; Copy A into register B
+        LDA 8001H      ; Load second number from 8001H into A
+        ADD B          ; Add contents of B to A
+        STA 8002H      ; Store result in memory location 8002H
+        HLT            ; Halt execution

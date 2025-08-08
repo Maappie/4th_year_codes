@@ -1,0 +1,11 @@
+; Lab 2: Subtract Two 8-bit Numbers
+; 8000H = minuend
+; 8001H = subtrahend
+; Result stored at 8002H
+
+        LDA 8000H      ; Load minuend into A
+        MOV B, A       ; Copy A into register B
+        LDA 8001H      ; Load subtrahend into A
+        SUB B          ; A = A - B
+        STA 8002H      ; Store result in 8002H
+        HLT            ; Stop

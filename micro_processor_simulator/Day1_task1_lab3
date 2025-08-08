@@ -1,0 +1,20 @@
+; Lab 3: Signed Subtraction
+; result = [8000H] - [8001H]
+; store at 8002H
+; also store sign at 8003H (00 = positive/zero, 01 = negative)
+
+        LDA 8000H      ; load 60 to A
+        MOV B, A       ; move 60 to B
+        LDA 8001H      ; load 50 to A
+        SUB B          ; A = A - B or A = 50 - 60
+        STA 8002H      ; store result in 2's complement form
+
+        JP POSITIVE    ; jump if S=0 (positive/zero)
+
+NEGATIVE: MVI A, 01H   ; mark negative
+          STA 8003H
+          HLT
+
+POSITIVE: MVI A, 00H   ; mark positive/zero
+          STA 8003H
+          HLT
