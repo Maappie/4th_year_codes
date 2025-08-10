@@ -5,9 +5,9 @@
 const int button_pin = 25;
 bool button_last_state = HIGH;
 
-const char* wifi_name = "Fake Extender";
-const char* wifi_pass = "Aa1231325213!";
-const char* url_server = "http://192.168.68.123:3000/presses";
+const char* wifi_name = "Fake Extender"; 
+const char* wifi_pass = "Aa1231325213!"; 
+const char* url_server = "http://192.168.68.123:3000/presses"; //use your pc or laptop ip address
 
 bool waitTimeForReconnecting() {
   for (int i = 0; i < 60; i++){
