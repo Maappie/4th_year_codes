@@ -1,38 +1,62 @@
-#include <Arduino.h>
-#include <IRremote.hpp>
+#include <IRremote.h>
 
-const int flamePin = 7;
-const int gasPin = A0;
-const int relayPin = 4;
-const int irPin = 2;  
+const uint8_t flamePin = 2;
+const uint8_t gasPin = A0;
+const uint8_t motionPin = 6;
+const uint8_t relayPin = 4;
+const uint8_t irPin = 3;
+
+bool hazardDetected = false;
 
 void setup() {
-  pinMode(flamePin, INPUT);
-  pinMode(relayPin, OUTPUT);
   Serial.begin(9600);
+  pinMode(flamePin, INPUT);
+  pinMode(motionPin, INPUT);
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);
 
   IrReceiver.begin(irPin, ENABLE_LED_FEEDBACK);
 }
 
 void loop() {
   int gasValue = analogRead(gasPin);
-  bool flameDetected = digitalRead(flamePin) == LOW;
+  bool flameDetected = digitalRead(flamePin) == HIGH;
+  bool motionDetected = digitalRead(motionPin) == LOW;
 
-  if (flameDetected || gasValue > 400) {
+  hazardDetected = flameDetected || motionDetected || gasValue >= 400;
+
+  if (hazardDetected) {
     digitalWrite(relayPin, HIGH);
-  } else {
-    digitalWrite(relayPin, LOW);
+    Serial.println("Hazard detected! Alarm activated.");
   }
 
   if (IrReceiver.decode()) {
-    uint32_t irCode = IrReceiver.decodedIRData.decodedRawData;
+    uint32_t value = IrReceiver.decodedIRData.decodedRawData; // LSB-first in 3.x
 
-    if (irCode == 0xFF30CF) {
+    Serial.print("IR code: ");
+    Serial.println(value, HEX);
+    if (value == 0xE9167B80){
       digitalWrite(relayPin, HIGH);
-    } else if (irCode == 0xFF18E7) {
-      digitalWrite(relayPin, LOW);
+      Serial.println("Manual Alarm triggered.");
+    } else if (value == 0xE8177B80) {
+      if (!hazardDetected){
+        digitalWrite(relayPin, LOW);
+        Serial.println("System Reset.");
+      } else {
+        Serial.println("Cannot reset during hazard.");
+      }
     }
-
-    IrReceiver.resume(); 
+    IrReceiver.resume();
   }
+
+  Serial.print("Flame detected: ");
+  Serial.println(flameDetected);
+
+  Serial.print("Motion detected: ");
+  Serial.println(motionDetected);
+
+  Serial.print("Gas Value: ");
+  Serial.println(gasValue);
+
+  delay(2000);
 }
