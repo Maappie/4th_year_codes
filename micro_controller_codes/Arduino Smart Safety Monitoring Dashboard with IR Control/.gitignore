@@ -1,0 +1,12 @@
+# PlatformIO build and environment files
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code settings
+.vscode/
+!.vscode/extensions.json  # keep recommended extensions file
+
+# OS-specific files
+.DS_Store
+Thumbs.db
