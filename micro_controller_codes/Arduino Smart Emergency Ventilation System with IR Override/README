@@ -1,0 +1,27 @@
+Wiring GUIDE
+1. Flame Sensor (KY-026 or similar)
+VCC → 5V
+GND → GND
+D0 (digital output) → Arduino D2
+
+2. Gas Sensor (MQ-2 Module)
+VCC → 5V
+GND → GND
+A0 (analog output) → Arduino A0
+
+3. LED
+Postive side (led) -> 5
+Negative side (led) -> GND
+
+4. Relay Module and Fan
+VCC → 5V
+GND → GND
+IN → Arduino D4
+COM → 5V
+NO → Positive side of Fan
+Negative (Fan) -> GND
+
+5. IR Receiver (HS0038 or similar)
+VCC → 5V
+GND → GND
+OUT → Arduino D3
