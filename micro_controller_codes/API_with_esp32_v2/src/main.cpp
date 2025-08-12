@@ -94,3 +94,29 @@ void loop() {
   // (Optional: WiFi reconnect logic if you want)
   vTaskDelay(pdMS_TO_TICKS(100));
 }
+
+
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  Serial.println("Connecting to wifi");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED);{
+    Serial.print(".");
+    delay(1000);
+  }
+
+  Serial.println("Setting time zone");
+  configTime(8 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  struct tm timeinfo;
+  while (getLocalTime(&timeinfo)) {
+    Serial.print("."); 
+    delay(1000);
+  }
+
+  pressQueue = xQueueCreate(32, sizeof(uint8_t));
+  xTaskCreatePinnedToCore(pressSenderTask, "pressSend", 4096, nullptr, 1, nullptr, APP_CPU_NUM);
+
+}

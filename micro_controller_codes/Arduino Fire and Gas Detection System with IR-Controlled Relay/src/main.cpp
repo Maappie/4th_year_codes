@@ -2,16 +2,13 @@
 
 const uint8_t flamePin = 2;
 const uint8_t gasPin = A0;
-const uint8_t motionPin = 6;
 const uint8_t relayPin = 4;
 const uint8_t irPin = 3;
 
-bool hazardDetected = false;
 
 void setup() {
   Serial.begin(9600);
   pinMode(flamePin, INPUT);
-  pinMode(motionPin, INPUT);
   pinMode(relayPin, OUTPUT);
   digitalWrite(relayPin, LOW);
 
@@ -21,17 +18,15 @@ void setup() {
 void loop() {
   int gasValue = analogRead(gasPin);
   bool flameDetected = digitalRead(flamePin) == HIGH;
-  bool motionDetected = digitalRead(motionPin) == LOW;
 
-  hazardDetected = flameDetected || motionDetected || gasValue >= 400;
 
-  if (hazardDetected) {
+  if (flameDetected || gasValue >= 400) {
     digitalWrite(relayPin, HIGH);
     Serial.println("Hazard detected! Alarm activated.");
   }
 
   if (IrReceiver.decode()) {
-    uint32_t value = IrReceiver.decodedIRData.decodedRawData; // LSB-first in 3.x
+    uint32_t value = IrReceiver.decodedIRData.decodedRawData;
 
     Serial.print("IR code: ");
     Serial.println(value, HEX);
@@ -39,12 +34,8 @@ void loop() {
       digitalWrite(relayPin, HIGH);
       Serial.println("Manual Alarm triggered.");
     } else if (value == 0xE8177B80) {
-      if (!hazardDetected){
-        digitalWrite(relayPin, LOW);
-        Serial.println("System Reset.");
-      } else {
-        Serial.println("Cannot reset during hazard.");
-      }
+      digitalWrite(relayPin, LOW);
+      Serial.println("System Reset.");
     }
     IrReceiver.resume();
   }
@@ -52,11 +43,7 @@ void loop() {
   Serial.print("Flame detected: ");
   Serial.println(flameDetected);
 
-  Serial.print("Motion detected: ");
-  Serial.println(motionDetected);
-
   Serial.print("Gas Value: ");
   Serial.println(gasValue);
 
-  delay(2000);
 }
