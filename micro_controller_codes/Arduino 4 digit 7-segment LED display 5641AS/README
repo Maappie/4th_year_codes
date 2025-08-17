@@ -1,0 +1,31 @@
+1. Wire the digit commons (cathodes)
+
+Connect each digit pin directly to an Arduino digital pin (we’ll “enable” a digit by driving it LOW because CC sinks current through the digit pin):
+
+Display pin 12 (D1) → Arduino D10
+
+Display pin 9 (D2) → Arduino D11
+
+Display pin 8 (D3) → Arduino D12
+
+Display pin 6 (D4) → Arduino D13
+
+2. Wire the segments (via resistors)
+
+Each segment pin goes through a 220–330 Ω resistor to an Arduino pin. (SevSeg will drive segments HIGH to light them on CC.)
+
+a : Display pin 11 → resistor → Arduino D2
+
+b : Display pin 7 → resistor → Arduino D3
+
+c : Display pin 4 → resistor → Arduino D4
+
+d : Display pin 2 → resistor → Arduino D5
+
+e : Display pin 1 → resistor → Arduino D6
+
+f : Display pin 10 → resistor → Arduino D7
+
+g : Display pin 5 → resistor → Arduino D8
+
+dp: Display pin 3 → resistor → Arduino D9 (optional; skip if you don’t need decimal points)
