@@ -1,0 +1,17 @@
+1. Relay Module
+Control Side
+VCC -> 5V of arduino (or any power source)
+GND -> GND of arduino (or any power source)
+Input -> D5 of arduino
+
+Load Side
+NO -> postive side of LED (add series resistor)
+COM -> 3.3V or 5V(make sure to add resistor to avoid burning LED)
+
+2. LED
+remaining negative side of LED
+Negative side of LED -> GND of arduino (or any power source)
+
+3. Button 
+One side of button -> D2 of arduino
+Other side -> GND
