@@ -13,7 +13,7 @@ void setup() {
   pinMode(flamePin, INPUT);
   pinMode(motionPin, INPUT);
   pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, HIGH);
+  digitalWrite(relayPin, LOW);
 
   IrReceiver.begin(irPin, ENABLE_LED_FEEDBACK);
 }
@@ -23,10 +23,10 @@ void loop() {
   bool flameDetected = digitalRead(flamePin) == HIGH;
   bool motionDetected = digitalRead(motionPin) == LOW;
 
-  hazardDetected = flameDetected || motionDetected || gasValue >= 90;
+  hazardDetected = flameDetected || motionDetected || gasValue >= 200;
 
   if (hazardDetected) {
-    digitalWrite(relayPin, LOW);
+    digitalWrite(relayPin, HIGH);
     Serial.println("Hazard detected! Alarm activated.");
   }
 
@@ -36,11 +36,11 @@ void loop() {
     Serial.print("IR code: ");
     Serial.println(value, HEX);
     if (value == 0xE9167B80){
-      digitalWrite(relayPin, LOW);
+      digitalWrite(relayPin, HIGH);
       Serial.println("Manual Alarm triggered.");
     } else if (value == 0xE8177B80) {
       if (!hazardDetected){
-        digitalWrite(relayPin, HIGH);
+        digitalWrite(relayPin, LOW);
         Serial.println("System Reset.");
       } else {
         Serial.println("Cannot reset during hazard.");
@@ -58,5 +58,4 @@ void loop() {
   Serial.print("Gas Value: ");
   Serial.println(gasValue);
  
-  delay(1500);
 }
