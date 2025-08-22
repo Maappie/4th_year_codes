@@ -46,11 +46,9 @@ void setup() {
   pinMode(PIRPIN, INPUT);
   pinMode(LIGHTPIN, INPUT);
 
-  // Button: internal pull-up; press connects to GND (falling edge)
   pinMode(BUTTONPIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BUTTONPIN), onButtonFall, FALLING);
 
-  // Keep SPI in master mode & init SD
   pinMode(10, OUTPUT);
 
   while (!SD.begin(CSPIN)) {
@@ -61,13 +59,11 @@ void setup() {
 }
 
 void loop() {
-  // Read sensors
   float temp = dht.readTemperature();
   float humidity = dht.readHumidity();
-  int   lightRaw = analogRead(LIGHTPIN);   // 0..1023 raw ADC
+  int   lightRaw = analogRead(LIGHTPIN);  
   bool  motion   = digitalRead(PIRPIN);
 
-  // Log CSV line: temp,humidity,lightRaw,motion
   dataFile = SD.open("envlog.csv", FILE_WRITE);
   if (dataFile) {
     dataFile.print(temp);     dataFile.print(",");
@@ -80,11 +76,10 @@ void loop() {
     Serial.println("Error opening file.");
   }
 
-  // If button asked for a dump, do it after closing the file
   if (dumpRequested) {
     dumpRequested = false;
     dumpLogFile("envlog.csv");
   }
 
-  delay(5000); // Log every 5 seconds
+  delay(5000); 
 }
