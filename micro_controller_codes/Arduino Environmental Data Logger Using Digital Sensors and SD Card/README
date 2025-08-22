@@ -1,0 +1,32 @@
+1. DHT11 (Temp & Humidity Sensor)
+
+VCC → 5V of Arduino
+GND → GND of Arduino
+DATA → D4 of Arduino
+
+2. PIR Motion Sensor
+
+VCC → 5V of Arduino
+GND → GND of Arduino
+OUT → D3 of Arduino
+
+3. Analog Light Sensor (LDR module / AO pin)
+
+VCC → 5V of Arduino
+GND → GND of Arduino
+AO → A0 of Arduino
+
+4. Push Button (Dump Logs Trigger)
+
+One side → D2 of Arduino
+Other side → GND of Arduino
+(Internal pull-up is used in code, no resistor needed)
+
+5. SD Card Module (SPI)
+
+VCC → 5V of Arduino (⚠ check your module, some need 3.3V)
+GND → GND of Arduino
+CS → D10 of Arduino
+MOSI → D11 of Arduino
+MISO → D12 of Arduino
+SCK → D13 of Arduino
