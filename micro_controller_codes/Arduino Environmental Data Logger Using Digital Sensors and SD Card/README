@@ -2,6 +2,7 @@
 
 VCC → 5V of Arduino
 GND → GND of Arduino
+10K Resistor (same node of DATA -> D4) -> 5V
 DATA → D4 of Arduino
 
 2. PIR Motion Sensor
