@@ -2,9 +2,9 @@
 #include <HTTPClient.h>
 #include <time.h>
 
-const char* ssid       = "Fake Extender";
-const char* password   = "Aa1231325213!";
-const char* serverName = "http://192.168.68.129:3000/presses";
+const char* ssid       = ""; // use your own wifi ssid
+const char* password   = ""; // use your own wifi pass
+const char* serverName = ""; // use your own server ip
 
 const int buttonPin = 25;                 // Button to GND, internal pull-up
 constexpr uint32_t DEBOUNCE_MS = 300;      // fast debounce
