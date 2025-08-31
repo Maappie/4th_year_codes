@@ -1,4 +1,4 @@
-1. DHT11 (Temp & Humidity Sensor)
+1. DHT22 (Temp & Humidity Sensor)
 
 VCC → 5V of Arduino
 GND → GND of Arduino

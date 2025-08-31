@@ -4,7 +4,7 @@
 
 // -------- Pins --------
 #define DHTPIN    4       // DHT22 data (moved off D2 to free interrupt)
-#define DHTTYPE   DHT11
+#define DHTTYPE   DHT22
 #define PIRPIN    3       // PIR digital output
 #define CSPIN     10      // SD chip select
 #define BUTTONPIN 2       // Interrupt button (falling -> dump logs)
@@ -66,10 +66,14 @@ void loop() {
 
   dataFile = SD.open("envlog.csv", FILE_WRITE);
   if (dataFile) {
-    dataFile.print(temp);     dataFile.print(",");
-    dataFile.print(humidity); dataFile.print(",");
-    dataFile.print(lightRaw); dataFile.print(",");
-    dataFile.println(motion ? "1" : "0");
+    dataFile.print("Temperature: ");
+    dataFile.println(temp);     
+    dataFile.print("Humidity: ");
+    dataFile.println(humidity); 
+    dataFile.print("Light intensity: ");
+    dataFile.print(lightRaw); 
+    dataFile.print("Motion Detected? ");
+    dataFile.println(motion ? "Yes" : "No");
     dataFile.close();
     Serial.println("Data logged.");
   } else {
