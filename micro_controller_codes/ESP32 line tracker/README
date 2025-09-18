@@ -1,0 +1,85 @@
+🔌 Motor Driver (L298N) to ESP32
+
+Your ESP32 is generating PWM signals on pins 26, 27, 32, 33.
+
+IN1 → GPIO 26 (Right motor forward channel)
+
+IN2 → GPIO 27 (Right motor reverse channel)
+
+IN3 → GPIO 32 (Left motor forward channel)
+
+IN4 → GPIO 33 (Left motor reverse channel)
+
+ENA/ENB pins of L298N are not used here, because you’re controlling direction/speed directly with PWM on IN1–IN4. Leave ENA/ENB jumpered HIGH if your module has enable pins.
+
+🔋 L298N Power Connections
+
+L298N +12V (or +V_s) → Motor power supply (e.g., 7.4–12V Li-ion pack, depending on your motors).
+
+L298N GND → Motor power ground.
+
+ESP32 GND → L298N GND (common ground is mandatory).
+
+L298N +5V output → ESP32 VIN (optional) if your module has onboard 5V regulator and your motor supply is >7V. Otherwise, power ESP32 separately via USB or regulated 5V.
+
+OUT1 & OUT2 → Right motor terminals
+
+OUT3 & OUT4 → Left motor terminals
+
+⚫ IR Sensors to ESP32
+
+Your code defines:
+
+IR_LEFT → GPIO 34
+
+IR_CENTER → GPIO 25
+
+IR_RIGHT → GPIO 35
+
+Each IR sensor usually has 3 pins: VCC, GND, OUT
+
+VCC → 3.3V (ESP32 works at 3.3V, so safer to use that, not 5V).
+
+GND → ESP32 GND
+
+OUT → ESP32 pin (34, 25, 35) as per above
+
+📝 Full Wiring Summary
+
+ESP32 → L298N
+
+GPIO 26 → IN1
+
+GPIO 27 → IN2
+
+GPIO 32 → IN3
+
+GPIO 33 → IN4
+
+GND → GND
+
+ESP32 → IR Sensors
+
+GPIO 34 → OUT (Left)
+
+GPIO 25 → OUT (Center)
+
+GPIO 35 → OUT (Right)
+
+3.3V → VCC (all sensors)
+
+GND → GND (all sensors)
+
+L298N → Motors
+
+OUT1, OUT2 → Right motor
+
+OUT3, OUT4 → Left motor
+
+Power
+
+Motor battery → L298N +12V (or +Vs)
+
+Battery GND → L298N GND & ESP32 GND
+
+L298N +5V (regulator output) → ESP32 VIN (optional if powering from motor battery)
