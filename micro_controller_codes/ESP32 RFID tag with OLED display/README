@@ -1,0 +1,41 @@
+This is an ESP32 sketch that reads an RFID/NFC tag using an RC522 reader and shows a short message on a SSD1306 I²C OLED.
+Behavior (exact):
+
+If the scanned tag UID equals E1:4D:90:04 → OLED displays Hello!.
+
+If the scanned tag UID equals 83:36:50:E4 → OLED displays Good morning!.
+
+Any other tag → OLED displays Unknown.
+After showing the message the display returns to Ready after 1.5 s. The sketch also prints the scanned UID to Serial (115200) to help you capture UIDs for configuration.
+
+Full wiring (exact pins — follow these; power at 3.3 V)
+
+Critical: Power everything with 3.3 V. The RC522 is not 5 V tolerant. Use a common GND.
+
+RC522 (SPI) → ESP32 DevKitC
+
+RC522 3.3V → ESP32 3V3
+
+RC522 GND → ESP32 GND
+
+RC522 SDA (SS) → ESP32 GPIO 5 ← SS_PIN in code
+
+RC522 SCK → ESP32 GPIO 18 ← SPI clock
+
+RC522 MOSI → ESP32 GPIO 23 ← SPI MOSI
+
+RC522 MISO → ESP32 GPIO 19 ← SPI MISO
+
+RC522 RST → ESP32 GPIO 27 ← RST_PIN in code
+
+RC522 IRQ → leave disconnected (NC)
+
+SSD1306 OLED (I²C) → ESP32
+
+OLED VCC → ESP32 3V3
+
+OLED GND → ESP32 GND
+
+OLED SDA → ESP32 GPIO 21 ← I²C SDA (Wire)
+
+OLED SCL → ESP32 GPIO 22 ← I²C SCL (Wire)
