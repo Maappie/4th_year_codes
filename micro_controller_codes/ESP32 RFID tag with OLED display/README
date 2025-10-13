@@ -1,7 +1,7 @@
 This is an ESP32 sketch that reads an RFID/NFC tag using an RC522 reader and shows a short message on a SSD1306 I²C OLED.
 Behavior (exact):
 
-If the scanned tag UID equals E1:4D:90:04 → OLED displays Hello!.
+If the scanned tag UID equals E1:4D:90:04 → OLED displays Hello!. (this is my UID, change this depending in your RFID tag UID)
 
 If the scanned tag UID equals 83:36:50:E4 → OLED displays Good morning!.
 
