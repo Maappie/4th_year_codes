@@ -1,0 +1,47 @@
+# ESP32 4x4 Keypad + OLED Display
+
+This project demonstrates a simple **keypad typing interface** on an **ESP32** using a **4x4 matrix keypad** and an **SSD1306 128×64 OLED display**.  
+Every key you press appears on the screen in real time. The buffer automatically scrolls to keep the most recent characters visible.  
+Supported keys: `0–9`, `A–D`, `#`, and `*`.
+
+---
+
+## 🧭 Features
+- Displays typed keypad input on a 128×64 OLED screen  
+- Automatically wraps and scrolls long text  
+- Ignores invalid keys (e.g., none detected)  
+- Uses I²C for OLED and digital pins for keypad matrix
+
+---
+
+## ⚙️ Wiring Diagram
+
+### OLED Display (SSD1306 I²C)
+| OLED Pin | ESP32 Pin | Description |
+|-----------|------------|-------------|
+| VCC       | 3.3V       | Power supply |
+| GND       | GND        | Ground |
+| SDA       | 21         | I²C data |
+| SCL       | 22         | I²C clock |
+
+### 4x4 Keypad
+| Keypad Pin | ESP32 GPIO | Role |
+|-------------|-------------|------|
+| R1 | 14 | Row 1 |
+| R2 | 12 | Row 2 |
+| R3 | 13 | Row 3 |
+| R4 | 4  | Row 4 *(changed from 15 to avoid boot issues)* |
+| C1 | 32 | Column 1 |
+| C2 | 33 | Column 2 |
+| C3 | 25 | Column 3 |
+| C4 | 26 | Column 4 |
+
+---
+
+## 🧩 Dependencies (PlatformIO)
+```ini
+lib_deps =
+  adafruit/Adafruit SSD1306@^2.5.10
+  adafruit/Adafruit GFX Library@^1.11.11
+  adafruit/Adafruit BusIO@^1.16.2
+  Chris--A/Keypad@^3.1.1
