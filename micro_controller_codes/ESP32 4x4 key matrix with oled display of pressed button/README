@@ -1,0 +1,22 @@
+This is a simple 4x4 keypad matrix setup with OLED that will show what buttons is pressed on the OLED screen. 
+Buttons here are configured as:
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+
+Keypad Pin	Connects to ESP32 GPIO	
+R1	-> GPIO 14	
+R2	-> GPIO 12	
+R3	-> GPIO 13	
+R4	-> GPIO 4	
+C1	-> GPIO 32	
+C2	-> GPIO 33	
+C3	-> GPIO 25	
+C4	-> GPIO 26	
+
+OLED Pin	Connects to ESP32	
+VCC	-> 3.3 V	
+GND	-> GND	
+SDA	-> GPIO 
+SCL	-> GPIO 22	
