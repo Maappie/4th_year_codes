@@ -66,9 +66,6 @@ double nvsLat = NAN, nvsLng = NAN;
 const uint32_t SAVE_INTERVAL = 5UL * 60UL * 1000UL;
 uint32_t lastSave = 0;
 
-// Gate periodic saves until first successful save this boot
-bool firstSaveDone = false;
-
 // Recent RX text buffers (for the RX popup screen only)
 String lastRx = "";
 String rxFull  = "";
@@ -537,9 +534,6 @@ void loraSend(const String& s) {
   }
 }
 
-// ---------- Keypad ----------
-void drawLogListScreen(); // forward (already declared above)
-
 void handleKeypad() {
   char k = keypad.getKey();
   if (!k) return;
@@ -661,28 +655,24 @@ void handleLoRaRx() {
 }
 
 // ---------- GPS periodic save ----------
-void maybeDoFirstSave() {
-  if (firstSaveDone) return;
-  if (haveLiveFix()) {
-    saveNVS(curLat, curLng);
-    nvsLat = curLat; nvsLng = curLng;
-    firstSaveDone = true;
-    lastSave = millis(); // start the 5-min cadence from now
-    Serial.println("[NVS] First GPS saved");
+void maybePersistFix() {
+  static uint32_t lastNoFixLog = 0;
+
+  if (!haveLiveFix()) {
+    if (millis() - lastNoFixLog >= 1000) { // log at most once per second
+      Serial.println("no valid live fix");
+      lastNoFixLog = millis();
+    }
+    return;
   }
-}
 
-void maybeSaveFix() {
-  if (!firstSaveDone) return;
-  if (millis() - lastSave < SAVE_INTERVAL) return;
-  lastSave = millis();
-
-  if (haveLiveFix()) {
+  if (lastSave == 0 || (millis() - lastSave) >= SAVE_INTERVAL) {
+    bool bootSave = (lastSave == 0);
     saveNVS(curLat, curLng);
-    nvsLat = curLat; nvsLng = curLng;
-    Serial.println("[NVS] Periodic GPS saved");
-  } else {
-    Serial.println("[NVS] Periodic save skipped (no valid fix)");
+    nvsLat = curLat;
+    nvsLng = curLng;
+    lastSave = millis();
+    Serial.println(bootSave ? "[NVS] Saved (boot)" : "[NVS] Periodic GPS saved");
   }
 }
 
@@ -721,9 +711,6 @@ void setup() {
   loadNVS();              // GPS lat/lng
   loadMsgLogFromNVS();    // last-10 message log
 
-  // Do NOT mark firstSaveDone from existing NVS; wait for fresh fix first
-  firstSaveDone = false;
-
   // ---- CRYPTO KEYS INIT ----
   deriveKey(TX_KEY_LABEL, txKey.key);
   txKey.label = TX_KEY_LABEL;
@@ -742,8 +729,7 @@ void setup() {
 // ---------- Loop ----------
 void loop() {
   handleGPSStream();   // continuously parse GPS data
-  maybeDoFirstSave();  // wait for first valid fix then save once
+  maybePersistFix();   // periodic save only after firstSaveDone
   handleKeypad();      // 'C' list (paged), '#' next page, numbers select, 'D' back
   handleLoRaRx();      // show received text (RX screen)
-  maybeSaveFix();      // periodic save only after firstSaveDone
 }
