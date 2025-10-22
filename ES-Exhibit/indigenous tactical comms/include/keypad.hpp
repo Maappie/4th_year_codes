@@ -1,5 +1,6 @@
 #pragma once
+#include "app_config.h"
 #include <Keypad.h>
 
-// Expose keypad instance
-extern Keypad keypad;
+// Keypad input handling
+void handleKeypad();
