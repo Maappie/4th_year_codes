@@ -1,28 +1,20 @@
 #pragma once
+#include "app_config.h"
 #include <Arduino.h>
 #include <Preferences.h>
 
-// Shared Preferences instance (defined in storage.cpp)
-extern Preferences prefs;
-
-// Message log
+// ---------- PERSISTENT LAST-10 MESSAGE LOG (NVS) ----------
+static const int LOG_CAP = 10;
 struct MsgEntry {
-  String sender;
-  String msg;
-  String nonceHex;
+    String sender;
+    String msg;
+    String nonceHex;
 };
 
-extern const int LOG_CAP;
-extern MsgEntry logBuf[];
-extern uint8_t logCount;
-extern uint8_t logHead;
-extern uint8_t logListPage;
+extern MsgEntry logBuf[LOG_CAP];
+extern Preferences prefs;
 
-// NVS helpers
+// Message log storage functions
 void loadMsgLogFromNVS();
-void saveMsgLogSlotToNVS(int slot);
-void saveMsgLogMetaToNVS();
-
-// API
 void addLogEntryPersistent(const String& sender, const String& message, const String& nonceHex);
 int userIndexToSlot(int userIdx);
