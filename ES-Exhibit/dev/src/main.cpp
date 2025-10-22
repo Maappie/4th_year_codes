@@ -49,6 +49,13 @@ TinyGPSPlus gps;
 Preferences prefs;              // reused for multiple namespaces
 HardwareSerial GPSSerial(2);    // Serial2
 
+// --- GPS raw NMEA capture (print once per second) ---
+const uint8_t NMEA_BATCH_CAP = 12;        // up to 12 sentences per second
+String nmeaBatch[NMEA_BATCH_CAP];
+uint8_t nmeaBatchCount = 0;
+String nmeaCurLine = "";                  // builds a sentence until '\n'
+uint32_t lastNmeaPrint = 0;
+
 // UI state (RX screen that exits on D)
 // === COMPOSE: added SCREEN_COMPOSE = 4
 enum ScreenState { SCREEN_HOME = 0, SCREEN_RX = 1, SCREEN_LOG_LIST = 2, SCREEN_LOG_VIEW = 3, SCREEN_COMPOSE = 4 };
@@ -218,10 +225,6 @@ void drawHome() {
 
   // GPS status only (no coordinates)
   display.setCursor(0, 12);
-  // Decide status:
-  // - updated: live fix and refreshed within last 5 minutes
-  // - not updated: we have a fix (live old or only NVS), but not fresh in last 5 minutes
-  // - not fix: no live fix and no stored coords
   bool haveStored = (!isnan(nvsLat) && !isnan(nvsLng));
   bool live = gps.location.isValid();
   bool fresh = live && (millis() - lastFixMillis < SAVE_INTERVAL);
@@ -254,11 +257,9 @@ void drawLogListScreen() {
   display.setCursor(0, 0);
   display.println("SELECT MSG 0-9");
 
-  // Which range to show
   int startIdx = (logListPage == 0) ? 0 : 5;
   int endIdx   = startIdx + 5; // exclusive
 
-  // One-column list to avoid overlaps
   for (int i = startIdx; i < endIdx; ++i) {
     int slot = userIndexToSlot(i);
     String label = String(i) + String(". ");
@@ -269,7 +270,6 @@ void drawLogListScreen() {
     display.println(label);
   }
 
-  // Footer (keep minimal to avoid crowding)
   display.setCursor(0, 56);
   display.print("#: Next  D: Back");
   display.display();
@@ -328,12 +328,46 @@ void updateLiveFix() {
   }
 }
 
+// *** NEW: helper to print the captured NMEA once per second ***
+void printNMEADump1Hz() {
+  if (millis() - lastNmeaPrint >= 1000) {
+    Serial.println("[GPS RAW @1s]");
+    if (nmeaBatchCount == 0) {
+      Serial.println("(no new NMEA)");
+    } else {
+      for (uint8_t i = 0; i < nmeaBatchCount; ++i) {
+        Serial.println(nmeaBatch[i]);
+      }
+      nmeaBatchCount = 0; // clear after printing
+    }
+    lastNmeaPrint = millis();
+  }
+}
+
 void handleGPSStream() {
   while (GPSSerial.available()) {
     char c = GPSSerial.read();
+
+    // Feed TinyGPS++ parser
     gps.encode(c);
     if (gps.location.isUpdated()) {
       updateLiveFix();
+    }
+
+    // *** NEW: accumulate raw NMEA lines for 1s batch print ***
+    if (c == '\r') {
+      // ignore
+    } else if (c == '\n') {
+      if (nmeaCurLine.length() > 0) {
+        if (nmeaBatchCount < NMEA_BATCH_CAP) {
+          nmeaBatch[nmeaBatchCount++] = nmeaCurLine;
+        }
+        nmeaCurLine = "";
+      }
+    } else {
+      if (nmeaCurLine.length() < 120) { // avoid runaway lines
+        nmeaCurLine += c;
+      }
     }
   }
 }
@@ -446,7 +480,6 @@ bool loraSendEncrypted(const String& plaintext){
   Serial.print("[TX NONCE] ");
   Serial.println(nHex);
 
-  // Prepare buffers
   const size_t plen = plaintext.length();
   std::unique_ptr<uint8_t[]> pbuf(new uint8_t[plen]);
   memcpy(pbuf.get(), plaintext.c_str(), plen);
@@ -463,7 +496,6 @@ bool loraSendEncrypted(const String& plaintext){
     return false;
   }
 
-  // Compose ASCII frame
   String frame = "ENC|tag="; frame += TX_SENDER_TAG;
   frame += "|n="; frame += nHex;
   frame += "|c="; frame += toHex(cbuf.get(), plen);
@@ -479,7 +511,6 @@ bool loraSendEncrypted(const String& plaintext){
 bool tryDecryptWithKey(const KeyEntry& k, const String& senderTag,
                        const String& nonceHex, const String& cHex, const String& tHex,
                        String& outPlain){
-  // Decode fields
   uint8_t nonce[NONCE_LEN];
   if(!fromHex(nonceHex, nonce, NONCE_LEN)) return false;
 
@@ -490,7 +521,7 @@ bool tryDecryptWithKey(const KeyEntry& k, const String& senderTag,
   uint8_t tag[TAG_LEN];
   if(!fromHex(tHex, tag, TAG_LEN)) return false;
 
-  std::unique_ptr<uint8_t[]> pbuf(new uint8_t[clen]); // plaintext len == ciphertext len for GCM
+  std::unique_ptr<uint8_t[]> pbuf(new uint8_t[clen]);
 
   const uint8_t* aad = (const uint8_t*)senderTag.c_str();
   size_t aad_len = senderTag.length();
@@ -503,7 +534,6 @@ bool tryDecryptWithKey(const KeyEntry& k, const String& senderTag,
 }
 
 bool parseEncryptedFrame(const String& s, String& senderTag, String& nHex, String& cHex, String& tHex){
-  // Format: ENC|tag=...|n=...|c=...|t=...
   if(!s.startsWith("ENC|")) return false;
   int p1 = s.indexOf("|tag=");
   int p2 = s.indexOf("|n=");
@@ -597,7 +627,6 @@ namespace Compose {
     }
   }
 
-  // Draw wrapped text: 21 chars/line, up to 6 lines
   void drawWrapped(const String& s, int x, int y, uint8_t charsPerLine, uint8_t maxLines) {
     uint16_t start = 0;
     uint8_t line = 0;
@@ -673,7 +702,6 @@ namespace Compose {
   void handleKey(char k) {
     if (!k) return;
 
-    // If user hits a non-digit (except control keys), lock current char first
     if (!isDigitKey(k) && k != '*' && k != '#'
         && k != 'A' && k != 'D') {
       commitActiveIfAny();
@@ -686,10 +714,7 @@ namespace Compose {
         commitActiveIfAny();
         if (message.length() > 0) {
           loraSend(message);
-          // Optionally persist TX locally:
-          // addLogEntryPersistent(TX_SENDER_TAG, message, "plain");
         }
-        // Clear and go Home
         message = "";
         activeKey = 0; activeIdx = 0;
         dirty = true;
@@ -726,13 +751,11 @@ void handleKeypad() {
   char k = keypad.getKey();
   if (!k) return;
 
-  // === COMPOSE: delegate while on compose screen
   if (screen == SCREEN_COMPOSE) {
     Compose::handleKey(k);
     return;
   }
 
-  // Route by screen
   switch (screen) {
     case SCREEN_RX:
       if (k == 'D') drawHome();
@@ -741,15 +764,12 @@ void handleKeypad() {
     case SCREEN_LOG_LIST:
       if (k == 'D') { drawHome(); return; }
       if (k == '#') { 
-        // toggle page 0<->1 and redraw
         logListPage ^= 1; 
         drawLogListScreen(); 
         return; 
       }
-      // number selection within the current page
       if ((k >= '0') && (k <= '9')) {
         int keyNum = k - '0';
-        // only allow numbers in visible range
         int minIdx = (logListPage == 0) ? 0 : 5;
         int maxIdx = (logListPage == 0) ? 4 : 9;
         if (keyNum >= minIdx && keyNum <= maxIdx) {
@@ -766,7 +786,6 @@ void handleKeypad() {
 
     case SCREEN_LOG_VIEW:
       if (k == 'D') { 
-        // return to list, keep same page
         drawLogListScreen(); 
       }
       return;
@@ -776,7 +795,6 @@ void handleKeypad() {
       break;
   }
 
-  // SCREEN_HOME keys
   switch (k) {
     case '1':
     case '2':
@@ -788,12 +806,12 @@ void handleKeypad() {
       drawHome();
       break;
     }
-    case '4': // === COMPOSE: enter custom message screen
+    case '4':
       Compose::enter();
       break;
 
     case 'C':
-      logListPage = 0;  // start at 0–4 page
+      logListPage = 0;
       drawLogListScreen();
       break;
     default:
@@ -814,17 +832,14 @@ void handleLoRaRx() {
     if(incoming.startsWith("ENC|")){
       String tag, nHex, cHex, tHex;
       if(parseEncryptedFrame(incoming, tag, nHex, cHex, tHex)){
-        // Show nonce (hex) on RX
         Serial.print("[RX NONCE] ");
         Serial.println(nHex);
 
-        // Try each RX key
         for(size_t i=0;i<RX_KEYS_COUNT;i++){
           String plain;
           if(tryDecryptWithKey(rxKeys[i], tag, nHex, cHex, tHex, plain)){
             shown = plain; handledEncrypted = true;
 
-            // Persist to NVS log (only authenticated)
             addLogEntryPersistent(tag, plain, nHex);
 
             Serial.printf("[RX] (AUTH) key=%s RSSI=%d SNR=%.1f\n",
@@ -857,7 +872,7 @@ void maybePersistFix() {
   static uint32_t lastNoFixLog = 0;
 
   if (!haveLiveFix()) {
-    if (millis() - lastNoFixLog >= 1000) { // log at most once per second
+    if (millis() - lastNoFixLog >= 1000) {
       Serial.println("no valid live fix");
       lastNoFixLog = millis();
     }
@@ -902,12 +917,12 @@ void setup() {
   LoRa.setSpreadingFactor(12);
   LoRa.setSignalBandwidth(125E3);
   LoRa.setCodingRate4(5);
-  LoRa.enableCrc();                // ON on both
-  LoRa.setSyncWord(0x34);          // same on both
-  LoRa.disableInvertIQ();          // TX and RX must match (default)
+  LoRa.enableCrc();
+  LoRa.setSyncWord(0x34);
+  LoRa.disableInvertIQ();
 
-  loadNVS();              // GPS lat/lng
-  loadMsgLogFromNVS();    // last-10 message log
+  loadNVS();
+  loadMsgLogFromNVS();
 
   // ---- CRYPTO KEYS INIT ----
   deriveKey(TX_KEY_LABEL, txKey.key);
@@ -927,11 +942,11 @@ void setup() {
 // ---------- Loop ----------
 void loop() {
   handleGPSStream();   // continuously parse GPS data
+  printNMEADump1Hz();  // *** NEW: dump raw NMEA once per second ***
   maybePersistFix();   // boot save + periodic 5-min saves when valid
   handleKeypad();      // Home / Logs / RX / Compose routing
   handleLoRaRx();      // show received text (RX screen)
 
-  // === COMPOSE: tick & render only while on compose screen
   if (screen == SCREEN_COMPOSE) {
     Compose::autoCommitIfTimeout();
     Compose::render(); // dirty-only redraw
