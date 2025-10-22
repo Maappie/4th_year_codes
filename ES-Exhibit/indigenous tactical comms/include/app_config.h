@@ -35,9 +35,9 @@ static const byte C3_PIN = 13;
 static const byte C4_PIN = 15;
 
 // Unit identity and crypto labels
-static const char* TX_SENDER_TAG = "Radio 1";
-static const char* TX_KEY_LABEL  = "unit-001";
-static const char* RX_KEYS_LABELS[] = {"HQ-PH", "unit-002"};
+static const char* TX_SENDER_TAG = "HQ";
+static const char* TX_KEY_LABEL  = "HQ-PH";
+static const char* RX_KEYS_LABELS[] = {"unit-001", "unit-002"};
 static const size_t RX_KEYS_COUNT = sizeof(RX_KEYS_LABELS) / sizeof(RX_KEYS_LABELS[0]);
 
 // Timing constants

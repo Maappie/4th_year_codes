@@ -18,67 +18,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-// --- WiFi / HTTP (ESP32) ---
-#include <WiFi.h>
-#include <HTTPClient.h>
-
-// ===================== DASHBOARD / WIFI CONFIG =====================
-static const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-static const char* WIFI_PASS     = "YOUR_WIFI_PASSWORD";
-static const char* DASH_POST_URL = "http://your.server/api/receive"; // change me
-
-// Non-blocking-ish WiFi connector; returns true if connected
-bool ensureWifi(uint32_t timeout_ms = 8000) {
-  if (WiFi.status() == WL_CONNECTED) return true;
-
-  if (WiFi.getMode() == WIFI_MODE_NULL) {
-    WiFi.mode(WIFI_STA);
-  }
-  if (WiFi.status() != WL_CONNECTED) {
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-  }
-
-  uint32_t start = millis();
-  while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeout_ms) {
-    delay(50); // let RTOS breathe
-  }
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("[NET] WiFi OK, IP="); Serial.println(WiFi.localIP());
-    return true;
-  }
-  Serial.println("[NET] WiFi connect timeout");
-  return false;
-}
-
-// Posts JSON {sender_tag, message, nonce}; returns HTTP code or <0 on failure
-int sendToDashboard(const String& senderTag, const String& message, const String& nonceHex) {
-  if (!ensureWifi()) return -1;
-
-  HTTPClient http;
-  http.begin(DASH_POST_URL);
-  http.addHeader("Content-Type", "application/json");
-
-  // Build minimal JSON (escape quotes/newlines if you expect them)
-  String payload;
-  payload.reserve(senderTag.length() + message.length() + nonceHex.length() + 64);
-  payload += "{\"sender_tag\":\""; payload += senderTag;  // NOTE: for production, escape JSON
-  payload += "\",\"message\":\"";  payload += message;
-  payload += "\",\"nonce\":\"";    payload += nonceHex;
-  payload += "\"}";
-
-  int code = http.POST(payload);
-  if (code > 0) {
-    String resp = http.getString();
-    Serial.printf("[HTTP] %d %s\n", code, resp.c_str());
-  } else {
-    Serial.printf("[HTTP] POST failed: %d\n", code);
-  }
-  http.end();
-  return code;
-}
-// ===================================================================
-
-// ---------- PIN MAP ----------
+// ---------- PIN MAP (edit to match your wiring) ----------
 static const int PIN_LORA_SS   = 5;
 static const int PIN_LORA_RST  = 14;
 static const int PIN_LORA_DIO0 = 26;         // used for Rx ISR
@@ -114,30 +54,37 @@ TinyGPSPlus gps;
 Preferences prefs;              // reused for multiple namespaces
 HardwareSerial GPSSerial(2);    // Serial2
 
+// UI state
 enum ScreenState { SCREEN_HOME = 0, SCREEN_RX = 1, SCREEN_LOG_LIST = 2, SCREEN_LOG_VIEW = 3, SCREEN_COMPOSE = 4 };
 ScreenState screen = SCREEN_HOME;
 
+// Last known good fix (live)
 double curLat = NAN, curLng = NAN;
 uint32_t curSat = 0;
 double curHdop = NAN;
 uint32_t lastFixMillis = 0;
 
+// Persisted (from NVS) if live GPS missing
 double nvsLat = NAN, nvsLng = NAN;
 
+// Save cadence
 const uint32_t SAVE_INTERVAL = 5UL * 60UL * 1000UL;
 uint32_t lastSave = 0;
 
+// Recent RX text buffers (for the RX popup screen only)
 String lastRx = "";
 String rxFull  = "";
 
 // --------- CRYPTO CONSTANTS / HELPERS ---------
-static const char* TX_SENDER_TAG = "Radio 1";
-static const char* TX_KEY_LABEL  = "unit-001";
-static const char* RX_KEYS_LABELS[] = {"HQ-PH", "unit-002"};
+static const char* TX_SENDER_TAG = "HQ";
+// TX key label; RX key labels:
+static const char* TX_KEY_LABEL  = "HQ-PH";
+static const char* RX_KEYS_LABELS[] = {"unit-001", "unit-002"};
 static const size_t RX_KEYS_COUNT = sizeof(RX_KEYS_LABELS)/sizeof(RX_KEYS_LABELS[0]);
 
-static const size_t KEY_LEN   = 32;  // 256-bit
-static const size_t NONCE_LEN = 12;  // 96-bit nonce
+// AES-GCM params
+static const size_t KEY_LEN   = 32;  // 256-bit (SHA256 output)
+static const size_t NONCE_LEN = 12;  // 96-bit nonce (GCM)
 static const size_t TAG_LEN   = 16;  // 128-bit tag
 
 struct KeyEntry {
@@ -604,6 +551,7 @@ void rxIsr(int packetSize) {
 
   RxItem item;
   item.len = 0;
+  // Read bytes quickly from radio FIFO
   while (LoRa.available() && item.len < (RX_MAX_BYTES - 1)) {
     item.data[item.len++] = (char)LoRa.read();
   }
@@ -618,7 +566,7 @@ void rxIsr(int packetSize) {
   }
 }
 
-// Slow path: decrypt, log, UI, and HTTP POST
+// Slow path: decrypt, log, draw UI
 void rxTask(void* pv) {
   Serial.printf("[RXTASK] started on core %d, prio %u\n", xPortGetCoreID(), uxTaskPriorityGet(nullptr));
   RxItem item;
@@ -628,9 +576,9 @@ void rxTask(void* pv) {
 
       String shown = incoming; // default (plaintext)
       bool handledEncrypted = false;
-      String tag, nHex, cHex, tHex;
 
       if(incoming.startsWith("ENC|")){
+        String tag, nHex, cHex, tHex;
         if(parseEncryptedFrame(incoming, tag, nHex, cHex, tHex)){
           for(size_t i=0;i<RX_KEYS_COUNT;i++){
             String plain;
@@ -639,14 +587,6 @@ void rxTask(void* pv) {
               addLogEntryPersistent(tag, plain, nHex);
               Serial.printf("[RX] (AUTH) key=%s RSSI=%d SNR=%.1f\n",
                             rxKeys[i].label, item.rssi, item.snr);
-
-              // >>>>>>>>>>>>> HTTP POST (only on successful decrypt) <<<<<<<<<<<<<
-              int rc = sendToDashboard(tag, plain, nHex);
-              if (rc <= 0) {
-                Serial.println("[HTTP] send failed (skipped or offline)");
-              }
-              // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
               break;
             }
           }
@@ -661,8 +601,6 @@ void rxTask(void* pv) {
       }else{
         Serial.printf("[RX] (PLAINTEXT) RSSI=%d SNR=%.1f\n",
                       item.rssi, item.snr);
-        // If you want to POST plaintext too, uncomment:
-        // int rc = sendToDashboard("PLAINTEXT", shown, "");
       }
 
       lastRx = shown;
@@ -873,14 +811,14 @@ void handleKeypad() {
   }
 }
 
-// ---------- GPS periodic save (trimmed per your request) ----------
+// ---------- GPS periodic save ----------
 void maybePersistFix() {
   if (!haveLiveFix()) {
     return;
   }
   if (lastSave == 0 || (millis() - lastSave) >= SAVE_INTERVAL) {
     bool bootSave = (lastSave == 0);
-    (void)bootSave;
+    (void)bootSave; // unused but kept for clarity
     saveNVS(curLat, curLng);
     nvsLat = curLat;
     nvsLng = curLng;
@@ -902,9 +840,6 @@ void setup() {
   display.setCursor(0,0);
   display.println("Booting...");
   display.display();
-
-  // WiFi early, just in case you want to be online before first RX
-  ensureWifi();
 
   GPSSerial.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
 
@@ -945,7 +880,7 @@ void setup() {
   } else {
     BaseType_t ok = xTaskCreatePinnedToCore(
       txTask, "txTask", 12288, nullptr,
-      1, // priority = 1
+      1, // <-- PRIORITY = 1
       &gTxTask, 1
     );
     if (ok != pdPASS) Serial.println("[TXQ] Failed to create txTask!");
@@ -958,7 +893,7 @@ void setup() {
   } else {
     BaseType_t ok = xTaskCreatePinnedToCore(
       rxTask, "rxTask", 12288, nullptr,
-      1, // priority = 1
+      1, // <-- PRIORITY = 1
       &gRxTask, 1
     );
     if (ok != pdPASS) Serial.println("[RXQ] Failed to create rxTask!");
