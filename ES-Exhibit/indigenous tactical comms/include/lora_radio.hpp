@@ -1,10 +1,9 @@
 #pragma once
+#include "app_config.h"
 #include <Arduino.h>
 
-void beginLoRa();
+// LoRa radio interface and encrypted send/receive
+bool initLoRaRadio();
 void loraSend(const String& s);
+bool loraSendEncrypted(const String& plaintext);
 void handleLoRaRx();
-
-// Exposed RX/TX buffers (used by UI/display)
-extern String lastRx;
-extern String rxFull;
