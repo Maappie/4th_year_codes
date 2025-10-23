@@ -1,6 +1,26 @@
-<h1>Message</h1>
-<p><strong>Created:</strong> <%= @message.created_at %></p>
-<p><strong>Sender:</strong> <%= @message.sender_tag %></p>
-<p><strong>Nonce:</strong> <%= @message.nonce %></p>
-<pre><%= @message.message %></pre>
-<p><%= link_to "Back", messages_path %></p>
+<div class="d-flex align-items-center mb-3">
+  <h1 class="h4 mb-0">Message</h1>
+  <%= link_to "Back", messages_path, class: "btn btn-outline-secondary btn-sm ms-auto" %>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <div class="text-muted small">Created</div>
+        <div><%= @message.created_at&.strftime("%Y-%m-%d %H:%M:%S") %></div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Sender</div>
+        <span class="badge text-bg-dark"><%= @message.sender_tag %></span>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Nonce</div>
+        <code class="nonce"><%= @message.nonce %></code>
+      </div>
+    </div>
+
+    <div class="mb-1 text-muted small">Message</div>
+    <pre class="p-3 bg-light rounded border" style="white-space: pre-wrap;"><%= @message.message %></pre>
+  </div>
+</div>

@@ -1,9 +1,13 @@
-#pragma once
-#include "app_config.h"
-#include <Arduino.h>
+#ifndef LORA_RADIO_MODULE_H
+#define LORA_RADIO_MODULE_H
 
-// LoRa radio interface and encrypted send/receive
-bool initLoRaRadio();
-void loraSend(const String& s);
-bool loraSendEncrypted(const String& plaintext);
-void handleLoRaRx();
+#include <Arduino.h>
+#include <LoRa.h>
+
+// LoRa radio control and messaging
+bool initLoRa();         // Initialize LoRa radio (returns false if init failed)
+void startLoRaTasks();   // Start LoRa RX/TX tasks and enable receive mode
+
+bool enqueueTx(const String& msg);  // Enqueue a message for transmission
+
+#endif // LORA_RADIO_MODULE_H

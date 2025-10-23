@@ -1,10 +1,13 @@
-#pragma once
-#include "app_config.h"
+#ifndef DISPLAY_MODULE_H
+#define DISPLAY_MODULE_H
+
+#include <Arduino.h>
+#include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "app_config.h"
 
-// OLED display object (I2C)
+// OLED display object
 extern Adafruit_SSD1306 display;
 
-// Initialize the display (returns void; continues even if OLED not found)
-void initDisplay();
+#endif // DISPLAY_MODULE_H

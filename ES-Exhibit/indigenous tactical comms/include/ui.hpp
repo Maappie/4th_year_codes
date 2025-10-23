@@ -1,25 +1,20 @@
-#pragma once
-#include "app_config.h"
-#include <Arduino.h>
+#ifndef UI_MODULE_H
+#define UI_MODULE_H
 
-// UI state screens
-enum ScreenState { SCREEN_HOME = 0, SCREEN_RX = 1, SCREEN_LOG_LIST = 2, SCREEN_LOG_VIEW = 3, SCREEN_COMPOSE = 4 };
+#include <Arduino.h>
+#include "display.hpp"
+
+// Screen states for UI
+enum ScreenState { SCREEN_HOME = 0, SCREEN_RX, SCREEN_LOG_LIST, SCREEN_LOG_VIEW, SCREEN_COMPOSE };
 extern ScreenState screen;
 extern uint8_t logListPage;
 extern String lastRx;
 extern String rxFull;
 
-// UI screens and interface
+// UI rendering functions
 void drawHome();
-void drawRxScreen();
 void drawLogListScreen();
 void drawLogViewScreen(int selectedSlot);
-String buildMessage(uint8_t which);
+void drawRxScreen();
 
-// Compose (custom message composer) namespace interface
-namespace Compose {
-    void handleKey(char k);
-    void autoCommitIfTimeout();
-    void render();
-    void enter();
-}
+#endif // UI_MODULE_H

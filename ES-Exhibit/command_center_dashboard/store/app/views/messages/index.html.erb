@@ -1,16 +1,68 @@
-<h1>Messages</h1>
-<table>
-  <thead>
-    <tr><th>Created</th><th>Sender</th><th>Message</th><th>Nonce</th></tr>
-  </thead>
-  <tbody>
-    <% @messages.each do |m| %>
-      <tr>
-        <td><%= m.created_at&.strftime("%Y-%m-%d %H:%M:%S") %></td>
-        <td><%= m.sender_tag %></td>
-        <td><%= link_to m.message.truncate(80), message_path(m) %></td>
-        <td><%= m.nonce %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
+<div class="d-flex align-items-center mb-3">
+  <h1 class="h3 mb-0">Messages</h1>
+  <span class="badge bg-secondary ms-3"><%= @messages.size %> shown</span>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form class="row g-2" method="get" action="<%= messages_path %>">
+      <div class="col-sm-4">
+        <label class="form-label mb-1">Sender</label>
+        <select class="form-select" name="sender">
+          <option value="">All</option>
+          <% @distinct_senders.each do |s| %>
+            <option value="<%= s %>" <%= "selected" if params[:sender] == s %>><%= s %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label mb-1">Search (message or nonce)</label>
+        <input type="search" name="q" value="<%= params[:q].to_s %>" class="form-control" placeholder="Type to filter…">
+      </div>
+      <div class="col-sm-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 190px;">Created</th>
+          <th style="width: 140px;">Sender</th>
+          <th>Message</th>
+          <th style="width: 360px;">Nonce</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @messages.each do |m| %>
+          <tr>
+            <td>
+              <div class="small text-muted"><%= m.created_at&.strftime("%Y-%m-%d") %></div>
+              <div><%= m.created_at&.strftime("%H:%M:%S") %></div>
+            </td>
+            <td>
+              <span class="badge text-bg-dark"><%= m.sender_tag %></span>
+            </td>
+            <td>
+              <div class="msg-snippet">
+                <%= link_to m.message, message_path(m), class: "text-decoration-none" %>
+              </div>
+            </td>
+            <td>
+              <code class="nonce"><%= m.nonce %></code>
+            </td>
+          </tr>
+        <% end %>
+        <% if @messages.empty? %>
+          <tr>
+            <td colspan="4" class="text-center text-muted py-4">No messages match your filters.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

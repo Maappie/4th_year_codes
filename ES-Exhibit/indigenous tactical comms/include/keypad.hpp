@@ -1,6 +1,14 @@
-#pragma once
-#include "app_config.h"
-#include <Keypad.h>
+#ifndef KEYPAD_MODULE_H
+#define KEYPAD_MODULE_H
 
-// Keypad input handling
+#include <Arduino.h>
+
+// Keypad handling and message composition
 void handleKeypad();
+
+namespace Compose {
+    void autoCommitIfTimeout();
+    void render();
+}
+
+#endif // KEYPAD_MODULE_H

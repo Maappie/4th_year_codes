@@ -1,25 +1,58 @@
 #include <Arduino.h>
 #include "app_config.h"
 #include "display.hpp"
+#include "wifi.hpp"
 #include "gps.hpp"
-#include "lora_radio.hpp"
-#include "storage.hpp"
 #include "crypto.hpp"
-#include "keypad.hpp"
+#include "storage.hpp"
+#include "lora_radio.hpp"
 #include "ui.hpp"
+#include "keypad.hpp"
+
+// Save last GPS fix to NVS periodically
+void maybePersistFix() {
+    if (!haveLiveFix()) {
+        return;
+    }
+    static uint32_t lastSave = 0;
+    if (lastSave == 0 || (millis() - lastSave) >= SAVE_INTERVAL) {
+        bool bootSave = (lastSave == 0);
+        (void)bootSave;
+        saveNVS(curLat, curLng);
+        nvsLat = curLat;
+        nvsLng = curLng;
+        lastSave = millis();
+    }
+}
 
 void setup() {
-    // ---------- Setup ----------
     Serial.begin(115200);
     delay(100);
-
-    initDisplay();
+    if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+        // OLED init failed, continue headless
+    }
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.println("Booting...");
+    display.display();
+    // Connect WiFi (non-blocking)
+    ensureWifi();
+    // Initialize GPS serial port
     GPSSerial.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
-    initLoRaRadio();
+    // Initialize LoRa radio
+    bool loraOk = initLoRa();
+    if (!loraOk) {
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.println("LoRa init failed!");
+        display.display();
+    }
+    // Load stored GPS location and message log
     loadNVS();
     loadMsgLogFromNVS();
-
-    // ---- CRYPTO KEYS INIT ----
+    // Derive encryption keys
     deriveKey(TX_KEY_LABEL, txKey.key);
     txKey.label = TX_KEY_LABEL;
     for (size_t i = 0; i < RX_KEYS_COUNT; ++i) {
@@ -32,20 +65,19 @@ void setup() {
         Serial.print("[KEY] RX label: ");
         Serial.println(rxKeys[i].label);
     }
-
+    // Start LoRa tasks and ISR
+    startLoRaTasks();
+    // Show the home screen
     drawHome();
 }
 
 void loop() {
-    // ---------- Loop ----------
-    handleGPSStream();    // continuously parse GPS data
-    printNMEADump1Hz();   // dump raw NMEA once per second
-    maybePersistFix();    // boot save + periodic 5-min saves when valid
-    handleKeypad();       // handle keypad input (UI navigation & compose)
-    handleLoRaRx();       // process LoRa RX and update UI if message received
-
+    handleGPSStream();
+    maybePersistFix();
+    handleKeypad();
     if (screen == SCREEN_COMPOSE) {
         Compose::autoCommitIfTimeout();
-        Compose::render();  // update compose screen if needed
+        Compose::render();
     }
+    delay(1);
 }
