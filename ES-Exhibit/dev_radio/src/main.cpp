@@ -76,10 +76,10 @@ String lastRx = "";
 String rxFull  = "";
 
 // --------- CRYPTO CONSTANTS / HELPERS ---------
-static const char* TX_SENDER_TAG = "HQ";
+static const char* TX_SENDER_TAG = "Radio 1";
 // TX key label; RX key labels:
-static const char* TX_KEY_LABEL  = "HQ-PH";
-static const char* RX_KEYS_LABELS[] = {"unit-001", "unit-002"};
+static const char* TX_KEY_LABEL  = "unit-001";
+static const char* RX_KEYS_LABELS[] = {"HQ-PH", "unit-002"};
 static const size_t RX_KEYS_COUNT = sizeof(RX_KEYS_LABELS)/sizeof(RX_KEYS_LABELS[0]);
 
 // AES-GCM params
