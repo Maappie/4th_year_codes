@@ -23,9 +23,9 @@
 #include <HTTPClient.h>
 
 // ===================== DASHBOARD / WIFI CONFIG =====================
-static const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-static const char* WIFI_PASS     = "YOUR_WIFI_PASSWORD";
-static const char* DASH_POST_URL = "http://your.server/api/receive"; // change me
+static const char* WIFI_SSID     = "Ssid";
+static const char* WIFI_PASS     = "password!";
+static const char* DASH_POST_URL = "http://192.168.68.131:3000/api/v1/messages";
 static const char* DEVICE_API_TOKEN = "dev-secret-123";  // change me
 
 // Non-blocking-ish WiFi connector; returns true if connected
@@ -133,9 +133,9 @@ String lastRx = "";
 String rxFull  = "";
 
 // --------- CRYPTO CONSTANTS / HELPERS ---------
-static const char* TX_SENDER_TAG = "Radio 1";
-static const char* TX_KEY_LABEL  = "unit-001";
-static const char* RX_KEYS_LABELS[] = {"HQ-PH", "unit-002"};
+static const char* TX_SENDER_TAG = "HQ";
+static const char* TX_KEY_LABEL  = "HQ-PH";
+static const char* RX_KEYS_LABELS[] = {"unit-001", "unit-002"};
 static const size_t RX_KEYS_COUNT = sizeof(RX_KEYS_LABELS)/sizeof(RX_KEYS_LABELS[0]);
 
 static const size_t KEY_LEN   = 32;  // 256-bit
