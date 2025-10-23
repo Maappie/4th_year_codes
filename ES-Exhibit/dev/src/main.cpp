@@ -26,6 +26,7 @@
 static const char* WIFI_SSID     = "YOUR_WIFI_SSID";
 static const char* WIFI_PASS     = "YOUR_WIFI_PASSWORD";
 static const char* DASH_POST_URL = "http://your.server/api/receive"; // change me
+static const char* DEVICE_API_TOKEN = "dev-secret-123";  // change me
 
 // Non-blocking-ish WiFi connector; returns true if connected
 bool ensureWifi(uint32_t timeout_ms = 8000) {
@@ -57,6 +58,7 @@ int sendToDashboard(const String& senderTag, const String& message, const String
   HTTPClient http;
   http.begin(DASH_POST_URL);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", String("Bearer ") + DEVICE_API_TOKEN);
 
   // Build minimal JSON (escape quotes/newlines if you expect them)
   String payload;
