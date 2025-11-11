@@ -7,6 +7,6 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :messages, only: [:index, :show]
+  resources :messages, only: [:index, :show, :destroy]
   root "messages#index"
 end

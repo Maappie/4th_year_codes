@@ -18,4 +18,13 @@ class MessagesController < ApplicationController
   def show
     @message = Message.find(params[:id])
   end
+  
+  def destroy
+    message = Message.find(params[:id])
+    message.destroy!  # after_destroy_commit broadcasts a remove to :messages
+    respond_to do |format|
+      format.html { redirect_to messages_path, notice: "Message deleted." }
+      format.turbo_stream { head :ok }  # for completeness
+    end
+  end
 end

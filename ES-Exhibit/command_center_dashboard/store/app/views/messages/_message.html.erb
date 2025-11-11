@@ -1,0 +1,34 @@
+<tr id="<%= dom_id(message) %>">
+  <td>
+    <div class="small text-muted"><%= message.created_at&.strftime("%Y-%m-%d") %></div>
+    <div><%= message.created_at&.strftime("%H:%M:%S") %></div>
+  </td>
+  <td>
+    <span class="badge text-bg-dark"><%= message.sender_tag %></span>
+  </td>
+  <td>
+    <div class="msg-snippet">
+      <%= message.message %>
+    </div>
+  </td>
+  <td>
+    <div class="d-flex align-items-center gap-2">
+      <code class="nonce"><%= message.nonce %></code>
+    </div>
+  </td>
+  <td>
+    <div class="msg-snippet">
+      <%= message.location.blank? || message.location == "N/A" ? "N/A" : message.location %>
+    </div>
+  </td>
+  <td>
+    <%= link_to "View", message_path(message), class: "btn btn-sm btn-outline-secondary" %>
+  <td>
+      <%= link_to "Delete",
+        message_path(message),
+        data: { turbo_method: :delete },
+        class: "btn btn-sm btn-outline-danger" %>
+  </td>
+  </td>
+    
+</tr>

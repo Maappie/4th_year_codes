@@ -1,3 +1,10 @@
+<style>
+  /* Give the map a defined height */
+  #map {
+    height: 400px;
+  }
+</style>
+
 <div class="d-flex align-items-center mb-3">
   <h1 class="h4 mb-0">Message</h1>
   <%= link_to "Back", messages_path, class: "btn btn-outline-secondary btn-sm ms-auto" %>
@@ -6,21 +13,79 @@
 <div class="card">
   <div class="card-body">
     <div class="row mb-3">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="text-muted small">Created</div>
         <div><%= @message.created_at&.strftime("%Y-%m-%d %H:%M:%S") %></div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="text-muted small">Sender</div>
         <span class="badge text-bg-dark"><%= @message.sender_tag %></span>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="text-muted small">Nonce</div>
         <code class="nonce"><%= @message.nonce %></code>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">Location</div>
+        <% if @message.location.blank? || @message.location == "N/A" %>
+          <div class="text-muted"><i>N/A</i></div>
+        <% else %>
+          <div><%= @message.location %></div>
+        <% end %>
       </div>
     </div>
 
     <div class="mb-1 text-muted small">Message</div>
     <pre class="p-3 bg-light rounded border" style="white-space: pre-wrap;"><%= @message.message %></pre>
+
+    <!-- Only show the map if we have a valid location -->
+    <% if @message.location.present? && @message.location != "N/A" %>
+      <div class="mb-1 text-muted small">Location Map</div>
+      <div id="map" class="rounded border"></div>
+    <% end %>
   </div>
 </div>
+
+<!-- The <script> tag for Leaflet was here, but it's now in application.html.erb -->
+
+<!-- Only run the map script if we have a valid location -->
+<% if @message.location.present? && @message.location != "N/A" %>
+  <script>
+    // ******* FIX: Listen for "turbo:load" instead of "DOMContentLoaded" *******
+    document.addEventListener("turbo:load", () => {
+      try {
+        // 1. Get the location string from ERB and parse it
+        const locString = "<%= @message.location %>";
+        const [lat, lng] = locString.split(',').map(Number);
+
+        if (isNaN(lat) || isNaN(lng)) {
+          console.error("Invalid location data:", locString);
+          return;
+        }
+
+        // Check if map is already initialized
+        let mapContainer = document.getElementById('map');
+        if (mapContainer && mapContainer._leaflet_id) {
+          mapContainer._leaflet_id = null;
+        }
+
+        // 2. Initialize the map
+        const map = L.map('map').setView([lat, lng], 13); // 13 is a good zoom level
+
+        // 3. Add the OpenStreetMap tile layer (the "offline" style map)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // 4. Add a marker at the location
+        const marker = L.marker([lat, lng]).addTo(map);
+        marker.bindPopup("<b>Location at time of message</b>").openPopup();
+
+      } catch (e) {
+        console.error("Error initializing map:", e);
+        document.getElementById('map').innerHTML = "<div class='p-3 text-danger'>Error loading map.</div>";
+      }
+    });
+  </script>
+<% end %>

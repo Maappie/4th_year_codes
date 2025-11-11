@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_22_231454) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_11_125702) do
   create_table "messages", force: :cascade do |t|
     t.string "sender_tag"
     t.text "message"
     t.string "nonce"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "location"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["nonce"], name: "index_messages_on_nonce"
     t.index ["sender_tag"], name: "index_messages_on_sender_tag"

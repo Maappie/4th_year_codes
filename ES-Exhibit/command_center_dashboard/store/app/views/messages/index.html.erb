@@ -35,31 +35,18 @@
           <th style="width: 140px;">Sender</th>
           <th>Message</th>
           <th style="width: 360px;">Nonce</th>
+          <th style="width: 100px;">Location</th>
+          <th style="width: 100px;">Actions</th>
         </tr>
       </thead>
-      <tbody>
-        <% @messages.each do |m| %>
-          <tr>
-            <td>
-              <div class="small text-muted"><%= m.created_at&.strftime("%Y-%m-%d") %></div>
-              <div><%= m.created_at&.strftime("%H:%M:%S") %></div>
-            </td>
-            <td>
-              <span class="badge text-bg-dark"><%= m.sender_tag %></span>
-            </td>
-            <td>
-              <div class="msg-snippet">
-                <%= link_to m.message, message_path(m), class: "text-decoration-none" %>
-              </div>
-            </td>
-            <td>
-              <code class="nonce"><%= m.nonce %></code>
-            </td>
-          </tr>
-        <% end %>
+      <tbody id="messages">
+        <%= turbo_stream_from :messages %>
+
+        <%= render @messages %>
+
         <% if @messages.empty? %>
           <tr>
-            <td colspan="4" class="text-center text-muted py-4">No messages match your filters.</td>
+            <td colspan="6" class="text-center text-muted py-4">No messages match your filters.</td>
           </tr>
         <% end %>
       </tbody>

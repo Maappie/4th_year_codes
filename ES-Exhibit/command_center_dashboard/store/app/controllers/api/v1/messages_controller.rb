@@ -9,7 +9,8 @@ class Api::V1::MessagesController < Api::V1::BaseController
         sender_tag: msg.sender_tag,
         message: msg.message,
         nonce: msg.nonce,
-        created_at: msg.created_at.iso8601
+        created_at: msg.created_at.iso8601,
+        location: msg.location
       }, status: :created
     else
       render json: { errors: msg.errors.full_messages }, status: :unprocessable_entity
@@ -18,6 +19,6 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
   private
   def msg_params
-    params.permit(:sender_tag, :message, :nonce)
+    params.permit(:sender_tag, :message, :nonce, :location)
   end
 end
