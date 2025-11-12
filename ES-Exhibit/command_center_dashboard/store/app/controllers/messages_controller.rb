@@ -11,7 +11,7 @@ class MessagesController < ApplicationController
       scope = scope.where("message LIKE ? OR nonce LIKE ?", q, q)
     end
 
-    @messages = scope.limit(500)
+    @messages = scope.page(params[:page]).per(25)
     @distinct_senders = Message.distinct.order(:sender_tag).pluck(:sender_tag)
   end
 
