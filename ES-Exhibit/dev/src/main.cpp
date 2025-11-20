@@ -23,9 +23,9 @@
 #include <HTTPClient.h>
 
 // ===================== DASHBOARD / WIFI CONFIG =====================
-static const char* WIFI_SSID     = "Ssid";
-static const char* WIFI_PASS     = "password!";
-static const char* DASH_POST_URL = "http://192.168.68.131:3000/api/v1/messages";
+static const char* WIFI_SSID     = "Fake Extender";
+static const char* WIFI_PASS     = "Aa1231325213!";
+static const char* DASH_POST_URL = "http://10.129.97.65:3000/api/v1/messages";
 static const char* DEVICE_API_TOKEN = "dev-secret-123";  // change me
 
 // Non-blocking-ish WiFi connector; returns true if connected
@@ -51,8 +51,8 @@ bool ensureWifi(uint32_t timeout_ms = 8000) {
   return false;
 }
 
-// Posts JSON {sender_tag, message, nonce}; returns HTTP code or <0 on failure
-int sendToDashboard(const String& senderTag, const String& message, const String& nonceHex) {
+// Posts JSON {sender_tag, message, nonce, location}; returns HTTP code or <0 on failure
+int sendToDashboard(const String& senderTag, const String& message, const String& nonceHex, const String& location) {
   if (!ensureWifi()) return -1;
 
   HTTPClient http;
@@ -62,10 +62,11 @@ int sendToDashboard(const String& senderTag, const String& message, const String
 
   // Build minimal JSON (escape quotes/newlines if you expect them)
   String payload;
-  payload.reserve(senderTag.length() + message.length() + nonceHex.length() + 64);
+  payload.reserve(senderTag.length() + message.length() + nonceHex.length() + location.length() + 80); // Increased reserve
   payload += "{\"sender_tag\":\""; payload += senderTag;  // NOTE: for production, escape JSON
   payload += "\",\"message\":\"";  payload += message;
   payload += "\",\"nonce\":\"";    payload += nonceHex;
+  payload += "\",\"location\":\""; payload += location; // <-- ADDED LOCATION
   payload += "\"}";
 
   int code = http.POST(payload);
@@ -83,7 +84,7 @@ int sendToDashboard(const String& senderTag, const String& message, const String
 // ---------- PIN MAP ----------
 static const int PIN_LORA_SS   = 5;
 static const int PIN_LORA_RST  = 14;
-static const int PIN_LORA_DIO0 = 26;         // used for Rx ISR
+static const int PIN_LORA_DIO0 = 26;        // used for Rx ISR
 static const long LORA_FREQ    = LORA_BAND;  // 433E6 from build_flags
 
 // SPI uses SCK=18, MISO=19, MOSI=23 by default on ESP32
@@ -113,7 +114,7 @@ Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
 
 // ---------- Globals ----------
 TinyGPSPlus gps;
-Preferences prefs;              // reused for multiple namespaces
+Preferences prefs;            // reused for multiple namespaces
 HardwareSerial GPSSerial(2);    // Serial2
 
 enum ScreenState { SCREEN_HOME = 0, SCREEN_RX = 1, SCREEN_LOG_LIST = 2, SCREEN_LOG_VIEW = 3, SCREEN_COMPOSE = 4 };
@@ -280,9 +281,9 @@ void drawHome() {
   bool live = gps.location.isValid();
   bool fresh = live && (millis() - lastFixMillis < SAVE_INTERVAL);
 
-  if (live && fresh) {
+  if (fresh) {
     display.println("GPS: updated");
-  } else if (live || haveStored) {
+  } else if (haveStored) {
     display.println("GPS: not updated");
   } else {
     display.println("GPS: not fix");
@@ -539,8 +540,8 @@ bool loraSendEncrypted_Blocking(const String& plaintext){
   Serial.print("[TX] "); Serial.println(frame);
   LoRa.beginPacket();
   LoRa.print(frame);
-  LoRa.endPacket();     // BLOCKING; returns when TX done
-  LoRa.receive();       // ensure RX mode resumes
+  LoRa.endPacket();      // BLOCKING; returns when TX done
+  LoRa.receive();        // ensure RX mode resumes
   return true;
 }
 
@@ -643,7 +644,12 @@ void rxTask(void* pv) {
                             rxKeys[i].label, item.rssi, item.snr);
 
               // >>>>>>>>>>>>> HTTP POST (only on successful decrypt) <<<<<<<<<<<<<
-              int rc = sendToDashboard(tag, plain, nHex);
+              
+              // 1. Get the LAST SAVED location from NVS globals (as requested)
+              String locString = formatLocation(nvsLat, nvsLng);
+
+              // 2. Call the updated function with the location string
+              int rc = sendToDashboard(tag, plain, nHex, locString);
               if (rc <= 0) {
                 Serial.println("[HTTP] send failed (skipped or offline)");
               }
@@ -655,16 +661,17 @@ void rxTask(void* pv) {
           if(!handledEncrypted){
             shown = "[AUTH FAIL] Unable to decrypt";
             Serial.printf("[RX] (AUTH FAIL) RSSI=%d SNR=%.1f\n",
-                          item.rssi, item.snr);
+                            item.rssi, item.snr);
           }
         }else{
           shown = "[PARSE FAIL] Bad ENC frame";
         }
       }else{
         Serial.printf("[RX] (PLAINTEXT) RSSI=%d SNR=%.1f\n",
-                      item.rssi, item.snr);
+                        item.rssi, item.snr);
         // If you want to POST plaintext too, uncomment:
-        // int rc = sendToDashboard("PLAINTEXT", shown, "");
+        // String locString = formatLocation(nvsLat, nvsLng);
+        // int rc = sendToDashboard("PLAINTEXT", shown, "", locString);
       }
 
       lastRx = shown;

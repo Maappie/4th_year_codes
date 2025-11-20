@@ -56,7 +56,7 @@ void drawHome() {
     bool haveStored = (!isnan(nvsLat) && !isnan(nvsLng));
     bool live = gps.location.isValid();
     bool fresh = live && (millis() - lastFixMillis < SAVE_INTERVAL);
-    if (live && fresh) {
+    if (fresh) {
         display.println("GPS: updated");
     } else if (live || haveStored) {
         display.println("GPS: not updated");

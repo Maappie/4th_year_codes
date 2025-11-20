@@ -2,7 +2,7 @@
 
 static const char* WIFI_SSID     = "Fake Extender";
 static const char* WIFI_PASS     = "Aa1231325213!";
-static const char* DASH_POST_URL = "http://192.168.68.131:3000/api/v1/messages";
+static const char* DASH_POST_URL = "http://192.168.68.110:3000/api/v1/messages";
 static const char* DEVICE_API_TOKEN = "dev-secret-123";  // change me
 
 // Non-blocking-ish WiFi connector; returns true if connected

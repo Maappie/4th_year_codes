@@ -1,248 +1,111 @@
-#include <Arduino.h>
-#include <SPI.h>
-#include <Wire.h>
-#include <LoRa.h>
-#include <TinyGPSPlus.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Keypad.h>
-#include <Preferences.h>
+#include <WiFi.h>
+#include <LittleFS.h>
+#include <ESPAsyncWebServer.h>
 
-// ---------- PIN MAP (edit to match your wiring) ----------
-static const int PIN_LORA_SS   = 5;
-static const int PIN_LORA_RST  = 14;
-static const int PIN_LORA_DIO0 = 26;
-static const long LORA_FREQ    = LORA_BAND; // 433E6 from build_flags
+const char* ssid = "ESP32_Test";
+const char* password = "12345678";
 
-// SPI uses SCK=18, MISO=19, MOSI=23 by default on ESP32
+AsyncWebServer server(80);
+unsigned long lastLogTime = 0;
+const unsigned long logInterval = 3000; // 3 seconds
+const char* logFile = "/data.txt";
 
-// GPS on Serial2
-static const int GPS_RX = 16; // ESP32 RX2  (connect to GPS TX)
-static const int GPS_TX = 17; // ESP32 TX2  (optional: to GPS RX)
+// 🧩 Print ALL storage info (LittleFS + Flash + Heap)
+void printFullStorageInfo() {
+  Serial.println("\n===== ESP32 STORAGE INFORMATION =====");
+  
+  // ----- Flash (program memory) -----
+  Serial.printf("Flash Chip Size      : %u bytes (%.2f MB)\n", ESP.getFlashChipSize(), ESP.getFlashChipSize() / 1048576.0);
+  Serial.printf("Flash Frequency      : %u Hz\n", ESP.getFlashChipSpeed());
+  Serial.printf("Sketch Size          : %u bytes\n", ESP.getSketchSize());
+  Serial.printf("Free Sketch Space    : %u bytes\n", ESP.getFreeSketchSpace());
+  
+  // ----- LittleFS -----
+  size_t totalBytes = LittleFS.totalBytes();
+  size_t usedBytes = LittleFS.usedBytes();
+  Serial.println("\n----- LittleFS Info -----");
+  Serial.printf("Total Space: %u bytes\n", totalBytes);
+  Serial.printf("Used Space : %u bytes\n", usedBytes);
+  Serial.printf("Free Space : %u bytes\n", totalBytes - usedBytes);
 
-// OLED I2C: SDA=21 SCL=22 (default)
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_ADDR 0x3C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-// Keypad 4x4 mapping
-// If 26 or 14 conflict with your LoRa pins, use the ALT set below and rewire.
-// Current set avoids DIO0 (26) & RST (14) by using different GPIOs.
-byte rowPins[4] = {32, 33, 25, 4};    // R1..R4
-byte colPins[4] = {27, 12, 13, 15};    // C1..C4
-// ALT suggestion if needed: rows {32,33,25,27}, cols {12,13,4,15}
-
-char keys[4][4] = {
-  {'1','2','3','A'},
-  {'4','5','6','B'},
-  {'7','8','9','C'},
-  {'*','0','#','D'}
-};
-Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
-
-// ---------- Globals ----------
-TinyGPSPlus gps;
-Preferences prefs;              // NVS
-HardwareSerial GPSSerial(2);    // Serial2
-
-// Last known good fix (live)
-double curLat = NAN, curLng = NAN;
-uint32_t curSat = 0;
-double curHdop = NAN;
-uint32_t lastFixMillis = 0;
-
-// Persisted (from NVS) if live GPS missing
-double nvsLat = NAN, nvsLng = NAN;
-
-// 5-minute persistence interval
-const uint32_t SAVE_INTERVAL = 5UL * 60UL * 1000UL;
-uint32_t lastSave = 0;
-
-// Recent RX text buffer
-String lastRx = "";
-
-// --------- Helpers ---------
-void drawHome() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
-  display.println("ESP32 LoRa Radio");
-  display.println("----------------");
-
-  if (!isnan(curLat) && !isnan(curLng)) {
-    display.print("GPS: ");
-    display.print(curLat, 6);
-    display.print(", ");
-    display.println(curLng, 6);
-  } else if (!isnan(nvsLat) && !isnan(nvsLng)) {
-    display.print("GPS(NVS): ");
-    display.print(nvsLat, 6);
-    display.print(", ");
-    display.println(nvsLng, 6);
-  } else {
-    display.println("GPS: no fix yet");
-  }
-
-  display.println();
-  display.println("1: Help");
-  display.println("2: Enemy sighted");
-  display.println("3: Current location");
-
-  if (lastRx.length()) {
-    display.println();
-    display.println("RX:");
-    // Show last line clipped
-    display.println(lastRx.substring(0, 18));
-  }
-  display.display();
+  // ----- RAM / Heap -----
+  Serial.println("\n----- RAM (Heap) Info -----");
+  Serial.printf("Heap Total   : %u bytes\n", ESP.getHeapSize());
+  Serial.printf("Heap Free    : %u bytes\n", ESP.getFreeHeap());
+  Serial.printf("Heap Minimum : %u bytes (lowest ever)\n", ESP.getMinFreeHeap());
+  
+  Serial.println("=====================================\n");
 }
 
-String formatLocation(double lat, double lng) {
-  if (isnan(lat) || isnan(lng)) return String("N/A");
-  String s = "";
-  s += String(lat, 6);
-  s += ",";
-  s += String(lng, 6);
-  return s;
-}
-
-void loadNVS() {
-  prefs.begin("gps", true);
-  nvsLat = prefs.getDouble("lat", NAN);
-  nvsLng = prefs.getDouble("lng", NAN);
-  prefs.end();
-}
-
-void saveNVS(double lat, double lng) {
-  prefs.begin("gps", false);
-  prefs.putDouble("lat", lat);
-  prefs.putDouble("lng", lng);
-  prefs.end();
-}
-
-bool haveLiveFix() {
-  return gps.location.isValid() && gps.location.age() < 5000; // <5s old
-}
-
-void updateLiveFix() {
-  if (gps.location.isValid()) {
-    curLat = gps.location.lat();
-    curLng = gps.location.lng();
-    curSat = gps.satellites.value();
-    curHdop = gps.hdop.hdop();
-    lastFixMillis = millis();
-  }
-}
-
-void handleGPSStream() {
-  while (GPSSerial.available()) {
-    char c = GPSSerial.read();
-    gps.encode(c);
-    if (gps.location.isUpdated()) {
-      updateLiveFix();
-    }
-  }
-}
-
-String buildMessage(uint8_t which) {
-  // which: 1=Help, 2=Enemy, 3=Current location
-  double lat = NAN, lng = NAN;
-  if (haveLiveFix()) { lat = curLat; lng = curLng; }
-  else if (!isnan(nvsLat) && !isnan(nvsLng)) { lat = nvsLat; lng = nvsLng; }
-
-  String loc = formatLocation(lat, lng);
-  if (which == 1) return "HELP @ " + loc;
-  if (which == 2) return "ENEMY SIGHTED @ " + loc;
-  return "CURRENT LOCATION @ " + loc;
-}
-
-void loraSend(const String& s) {
-  LoRa.beginPacket();
-  LoRa.print(s);
-  LoRa.endPacket();
-}
-
-void handleKeypad() {
-  char k = keypad.getKey();
-  if (!k) return;
-
-  if (k == '1' || k == '2' || k == '3') {
-    uint8_t which = (k - '0');
-    String msg = buildMessage(which);
-    loraSend(msg);
-    lastRx = "TX: " + msg; // show what we sent
-    drawHome();
-  }
-}
-
-void handleLoRaRx() {
-  int packetSize = LoRa.parsePacket();
-  if (packetSize) {
-    String incoming = "";
-    while (LoRa.available()) {
-      incoming += (char)LoRa.read();
-    }
-    lastRx = incoming;
-    drawHome();
-  }
-}
-
-void maybeSaveFix() {
-  if (millis() - lastSave < SAVE_INTERVAL) return;
-  lastSave = millis();
-
-  if (haveLiveFix()) {
-    saveNVS(curLat, curLng);
-    nvsLat = curLat; nvsLng = curLng;
-  }
-}
-
-// ---------- Setup ----------
 void setup() {
   Serial.begin(115200);
-  delay(100);
+  Serial.println("\nBooting ESP32...");
 
-  // OLED
-  if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
-    // If OLED init fails, continue headless
+  // Initialize LittleFS
+  if (!LittleFS.begin(true)) {
+    Serial.println("LittleFS Mount Failed!");
+    return;
   }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
-  display.println("Booting...");
-  display.display();
 
-  // GPS
-  GPSSerial.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
+  // Print initial storage details
+  printFullStorageInfo();
 
-  // LoRa
-  SPI.begin(18, 19, 23); // SCK, MISO, MOSI
-  LoRa.setPins(PIN_LORA_SS, PIN_LORA_RST, PIN_LORA_DIO0);
-  if (!LoRa.begin(LORA_FREQ)) {
-    display.clearDisplay();
-    display.setCursor(0,0);
-    display.println("LoRa init failed!");
-    display.display();
-    // continue trying anyway
-  }
-  LoRa.setSpreadingFactor(12);    // robust default
-  LoRa.setSignalBandwidth(125E3); // 125 kHz
-  LoRa.setCodingRate4(5);         // 4/5
-  LoRa.enableCrc();
+  // Start Wi-Fi Access Point
+  WiFi.softAP(ssid, password);
+  Serial.println("ESP32 Wi-Fi started");
+  Serial.print("Access this web page at: http://");
+  Serial.println(WiFi.softAPIP());
 
-  // Load last saved fix
-  loadNVS();
+  // Serve the web dashboard
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    String html = "<html><head><meta http-equiv='refresh' content='2'>";
+    html += "<style>body{font-family:Arial;background:#fafafa;margin:40px;}pre{background:#fff;padding:10px;border-radius:10px;white-space:pre-wrap;}</style>";
+    html += "<h2>📊 ESP32 LittleFS Log Viewer</h2><pre>";
 
-  drawHome();
+    File file = LittleFS.open("/data.txt", "r");
+    if (!file) {
+      html += "No log data yet.";
+    } else {
+      while (file.available()) {
+        html += file.readStringUntil('\n');  // Each line appears as a new row
+      }
+      file.close();
+    }
+
+    html += "</pre></html>";
+    request->send(200, "text/html", html);
+  });
+
+  server.begin();
+  Serial.println("Web server started");
 }
 
-// ---------- Loop ----------
 void loop() {
-  handleGPSStream();  // feed NMEA to TinyGPS++
-  handleKeypad();     // send on 1/2/3
-  handleLoRaRx();     // show received text
-  maybeSaveFix();     // every 5 minutes if valid
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - lastLogTime >= logInterval) {
+    lastLogTime = currentMillis;
+
+    // Open the file in append mode
+    File file = LittleFS.open(logFile, FILE_APPEND);
+    if (!file) {
+      Serial.println("Failed to open log file for writing");
+      return;
+    }
+
+    // Write data as a new line (row)
+    String logEntry = "Time (ms): " + String(currentMillis) + "\n";
+    file.print(logEntry);
+    file.close();
+
+    Serial.print("Logged: ");
+    Serial.println(logEntry);
+
+    // Print full storage info every 10 logs
+    static int counter = 0;
+    if (++counter >= 10) {
+      printFullStorageInfo();
+      counter = 0;
+    }
+  }
 }

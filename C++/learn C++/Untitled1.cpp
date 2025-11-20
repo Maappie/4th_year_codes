@@ -1,37 +1,30 @@
 #include <iostream>
-using namespace std;
+#include <chrono>
+#include <iomanip>
 
 int main() {
-    int num = 10;
-    int* ptr = &num; // pointer pointing to num
+    using clock = std::chrono::high_resolution_clock;
+    const int N = 1'000'000;
+    auto t0 = clock::now();
 
-    cout << "This is the memory address of num: " << &num << endl; 
-    cout << "This is the value of variable num: " << num << endl;
-    cout << "This is the ptr that holds the memory address of num: " << ptr << endl;
-    cout << "This is the value inside the ptr address: " << *ptr << endl;
-
-    // --- Null pointer example ---
-    int* nullPtr = nullptr; // points to nothing
-    cout << "\nNull pointer created." << endl;
-    cout << "nullPtr value (address it holds): " << nullPtr << endl;
-
-    if (nullPtr == nullptr) {
-        cout << "nullPtr is pointing to NOTHING right now." << endl;
+    for (int i = 1; i <= N; ++i) {
+        // Uncomment to spam numbers:
+        std::cout << i << '\n';
+        if (i % 100000 == 0) {
+            double elapsed = std::chrono::duration<double>(clock::now() - t0).count();
+            double rate = (elapsed > 0) ? (i / elapsed) : 0.0;
+            double eta  = (rate > 0) ? ((N - i) / rate) : 0.0;
+            std::cerr << "\r" << i << "/" << N
+                      << "  elapsed=" << std::fixed << std::setprecision(2) << elapsed << "s"
+                      << "  ETA=" << std::fixed << std::setprecision(2) << eta << "s"
+                      << std::flush;
+        }
     }
 
-    // Assigning nullPtr to point to num
-    nullPtr = &num;
-    cout << "\nAfter assigning, nullPtr now points to num." << endl;
-    cout << "nullPtr value (address it holds): " << nullPtr << endl;
-    cout << "Value at nullPtr: " << *nullPtr << endl;
-
-    // Changing value through pointer
-    *nullPtr = 20; // modifies num
-    cout << "\nAfter changing *nullPtr to 20:" << endl;
-    cout << "num: " << num << endl;
-    cout << "*ptr: " << *ptr << " (same num)" << endl;
-	cout << "value of num: " << num << endl;
-	
-	cout << "value of ptr that hold the address of num: " << ptr << endl;
-	cout << "address of nullPtr: " << nullPtr << endl;
-	cout << "address of num: " << &num << endl; 
+    std::cerr << std::endl;
+    double total = std::chrono::duration<double>(clock::now() - t0).count();
+    double rate  = (total > 0) ? (N / total) : 0.0;
+    std::cerr << "Done. Elapsed=" << std::fixed << std::setprecision(3) << total
+              << "s  Avg=" << std::fixed << std::setprecision(0) << rate << " it/s\n";
+    return 0;
+}

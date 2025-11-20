@@ -4,9 +4,9 @@
 #include <memory>       // for std::unique_ptr
 
 // Definition of global cryptographic variables
-const char* TX_SENDER_TAG = "Radio 1";
-const char* TX_KEY_LABEL  = "unit-001";
-const char* RX_KEYS_LABELS[] = { "HQ-PH", "unit-002" };
+const char* TX_SENDER_TAG = "Radio 2";
+const char* TX_KEY_LABEL  = "unit-002";
+const char* RX_KEYS_LABELS[] = { "HQ-PH", "unit-001" };
 const size_t RX_KEYS_COUNT = sizeof(RX_KEYS_LABELS) / sizeof(RX_KEYS_LABELS[0]);
 
 KeyEntry txKey;
